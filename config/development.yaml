@@ -1,0 +1,15 @@
+server:
+    host: "localhost"
+    port: 8081
+
+security:
+    secret_key: R5cCI6IkpXVCJ9
+
+database:
+    driver: "postgres"
+    dbname: "webapp"
+    username: "iwangunawan"
+    password: "rahasia"
+    host: "localhost"
+    port: 5432
+    ssl: "disable"
