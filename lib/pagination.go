@@ -2,40 +2,42 @@ package lib
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"strings"
-	"time"
+	"net/url"
 )
 
-type Pagination struct {
-	From         int64  `json:"from"`
-	Limit        int64  `json:"limit"`
-	BeforeCursor string `json:"before_cursor"`
-	AfterCursor  string `json:"after_cursor"`
+func Pagination(r *url.URL) (*PaginationDTO, error) {
+	var (
+		Limit  int64 = 10
+		Offset int64 = 0
+	)
+	qs := r.Query()
+
+	NextCursor := qs.Get("next_cursor")
+	PrevCursor := qs.Get("next_cursor")
+
+	if Limit > 0 {
+		Offset = Offset + (Limit + 1)
+		NextCursor = fmt.Sprintf("?limit=%d&offset=%d", Limit, Offset)
+		PrevCursor = fmt.Sprintf("?limit=%d&offset=%d", Limit, (Offset - Limit))
+	}
+
+	return &PaginationDTO{
+		BeforeCursor: EncodeCursor(NextCursor),
+		AfterCursor:  EncodeCursor(PrevCursor),
+	}, nil
 }
 
-func decodeCursor(encodedCursor string) (res time.Time, uuid string, err error) {
-	byt, err := base64.StdEncoding.DecodeString(encodedCursor)
+func DecodeCursor(encodedCursor string) (string, error) {
+	str, err := base64.StdEncoding.DecodeString(encodedCursor)
 	if err != nil {
-		return
+		return "", err
 	}
 
-	arrStr := strings.Split(string(byt), ",")
-	if len(arrStr) != 2 {
-		err = errors.New("cursor is invalid")
-		return
-	}
-
-	res, err = time.Parse(time.RFC3339Nano, arrStr[0])
-	if err != nil {
-		return
-	}
-	uuid = arrStr[1]
-	return
+	return ToString(str), nil
 }
 
-func encodeCursor(t time.Time, uuid string) string {
-	key := fmt.Sprintf("%s,%s", t.Format(time.RFC3339Nano), uuid)
+func EncodeCursor(uuid string) string {
+	key := fmt.Sprintf("%s", uuid)
 	return base64.StdEncoding.EncodeToString([]byte(key))
 }

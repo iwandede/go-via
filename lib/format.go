@@ -39,3 +39,10 @@ func ToInt64(params string) int64 {
 	number, _ := strconv.ParseInt(params, 10, 64)
 	return number
 }
+
+func GenerateCode(s string, pad string, length int) string {
+	for i := len(s); i < length; i++ {
+		s = pad + s
+	}
+	return s
+}

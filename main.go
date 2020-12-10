@@ -42,6 +42,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
 	log.Printf("Service Started on Port %s & Environment %v", s.Addr, *env)
 	log.Debug(s.ListenAndServe())
 }

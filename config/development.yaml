@@ -1,3 +1,9 @@
+info:
+    owner: "PT. XYZ"
+    copyright: "%s"
+    mode: "Development"
+    version: "1.0.0"
+
 server:
     host: "localhost"
     port: 8081
@@ -7,9 +13,18 @@ security:
 
 database:
     driver: "postgres"
-    dbname: "webapp"
-    username: "iwangunawan"
-    password: "rahasia"
-    host: "localhost"
+    dbname: "abata_apps"
+    username: "postgres"
+    password: "abata123"
+    host: "202.157.185.132"
     port: 5432
     ssl: "disable"
+
+integration:
+    whatsapp:
+        url: "https://api.nusasms.com/api/v3/sendwa/plain"
+        username: "yeni_api"
+        password: "Rahasiaabata@1"
+    sms:
+        url: "https://smsgateway.me/api/v4"
+        token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhZG1pbiIsImlhdCI6MTYwNzUyNzg5MSwiZXhwIjo0MTAyNDQ0ODAwLCJ1aWQiOjg1OTE3LCJyb2xlcyI6WyJST0xFX1VTRVIiXX0.Envh5hT6mQ5nySJBV0QeK7Fwd_F1BmFYgsD6BVEH6YA"

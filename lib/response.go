@@ -16,7 +16,6 @@ func ResponseSuccess(data interface{}) *Response {
 		ResponseCode: 200,
 		Success:      true,
 		Message:      "The request was fullfield",
-		Pagination:   data,
 		Data:         data,
 	}
 
@@ -114,6 +113,19 @@ func ResponseOther(err interface{}, text string) *Response {
 		Success:      false,
 		Message:      text,
 		Error:        err,
+	}
+
+	return response
+}
+
+func ResponseSuccessWithPagination(data interface{}, pagination interface{}) *Response {
+	response := &Response{
+		ResponseID:   GenerateID(),
+		ResponseCode: 200,
+		Success:      true,
+		Message:      "The request was fullfield",
+		Pagination:   pagination,
+		Data:         data,
 	}
 
 	return response

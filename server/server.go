@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"github.com/jmoiron/sqlx"
 	"log"
 	"net/http"
 
@@ -11,14 +12,13 @@ import (
 	"github.com/iwandede/go-via/database"
 	"github.com/iwandede/go-via/lib"
 	"github.com/iwandede/go-via/middleware"
-	"github.com/jinzhu/gorm"
 )
 
 type APPServer struct {
-	Config    *config.Config
-	Server    *config.Server
-	Datastore *gorm.DB
-	ctx       context.Context
+	Config      *config.Config
+	Server      *config.Server
+	Datastore   *sqlx.DB
+	ctx         context.Context
 }
 
 func NewAppHttpServer(config *config.Config) *APPServer {
@@ -34,10 +34,11 @@ func NewAppHttpServer(config *config.Config) *APPServer {
 }
 
 func (app APPServer) InitRouter() *mux.Router {
+	middlewares := middleware.NewMiddlewareConfig(app.Config.Security, app.Datastore)
 	router := mux.NewRouter()
-	router.Use(middleware.CorsHeaders)
-	router.Use(middleware.HttpLogging)
-
+	router.Use(middlewares.CorsHeaders)
+	router.Use(middlewares.HttpLogging)
+	// router.Use(middleware.Authtentication)
 	router.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -49,5 +50,5 @@ func (app APPServer) InitRouter() *mux.Router {
 		json.NewEncoder(w).Encode(lib.ResponseNotFound("404 Page not found!"))
 	})
 
-	return app.Routes(router)
+	return app.Routes(middlewares, router)
 }

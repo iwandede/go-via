@@ -2,23 +2,37 @@ package middleware
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/jmoiron/sqlx"
 	"log"
 	"net/http"
-	"strings"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/iwandede/go-via/lib"
 	"github.com/iwandede/go-via/models"
+
+	"github.com/iwandede/go-via/config"
+	"github.com/iwandede/go-via/lib"
 )
 
-func HttpLogging(next http.Handler) http.Handler {
+type ConfigMiddleware struct {
+	key       *config.Security
+	Datastore *sqlx.DB
+}
+
+func NewMiddlewareConfig(key *config.Security, db *sqlx.DB) *ConfigMiddleware {
+	return &ConfigMiddleware{
+		key:       key,
+		Datastore: db,
+	}
+}
+
+func (m ConfigMiddleware) HttpLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println(r.RequestURI)
 		next.ServeHTTP(w, r)
 	})
 }
 
-func CorsHeaders(next http.Handler) http.Handler {
+func (m ConfigMiddleware) CorsHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, PATCH, DELETE")
@@ -33,34 +47,41 @@ func CorsHeaders(next http.Handler) http.Handler {
 	})
 }
 
-func Authtentication(next http.Handler) http.Handler {
+func (m ConfigMiddleware) AuthenticationGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authorization := r.Header.Get("Authorization")
+		var data = models.Service{}
+		token := r.Header.Get("token")
+		signature := r.Header.Get("signature")
+		query := fmt.Sprintf("SELECT * FROM workbench.app_service WHERE srv_id = '%s' LIMIT 1", token)
 
-		tknStr := strings.Split(authorization, " ")
-		if len(tknStr) < 1 {
+		if token == "" {
+			json.NewEncoder(w).Encode(lib.ResponseBadRequest("Invalid Token"))
+			return
+		}
+
+		if signature == "" {
+			json.NewEncoder(w).Encode(lib.ResponseBadRequest("Invalid Signature"))
+			return
+		}
+
+		if err := m.Datastore.QueryRowx(query).StructScan(&data); err != nil {
+			json.NewEncoder(w).Encode(lib.ResponseInternalError(err))
+			return
+		}
+
+		ok := lib.VerifySignature(token, signature, data.PrivateKey)
+		if !ok {
 			json.NewEncoder(w).Encode(lib.ResponseUnauthorized("Unauthorized!"))
 			return
 		}
 
-		if tknStr[0] != "Bearer" {
+		if lib.EncodeHMACSHA256(token, data.PrivateKey) != data.Signature {
 			json.NewEncoder(w).Encode(lib.ResponseUnauthorized("Unauthorized!"))
 			return
 		}
 
-		claims := &models.Claims{}
-
-		tkn, err := jwt.ParseWithClaims(tknStr[1], claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte("R5cCI6IkpXVCJ9"), nil
-		})
-
-		if err != nil && err == jwt.ErrSignatureInvalid {
-			json.NewEncoder(w).Encode(lib.ResponseUnauthorized(err))
-			return
-		}
-
-		if !tkn.Valid {
-			json.NewEncoder(w).Encode(lib.ResponseUnauthorized("Unauthorized!"))
+		if data.Status < 1 {
+			json.NewEncoder(w).Encode(lib.ResponseForbidden("Forbidden!"))
 			return
 		}
 
